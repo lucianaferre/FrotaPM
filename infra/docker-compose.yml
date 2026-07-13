@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_DB: frota
+      POSTGRES_USER: frota_user
+      POSTGRES_PASSWORD: frota_pass
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./infra/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+
+  backend:
+    build: ./backend
+    restart: on-failure
+    env_file:
+      - .env
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USER=frota_user
+      - DATABASE_PASSWORD=frota_pass
+      - DATABASE_NAME=frota
+      - PORT=4000
+      - SIMULATE_GPS=true
+    depends_on:
+      - postgres
+    ports:
+      - "4000:4000"
+
+  frontend:
+    build: ./frontend
+    restart: on-failure
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+volumes:
+  db-data:
