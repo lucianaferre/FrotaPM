@@ -1,23 +1,25 @@
 // gpsSimulator: periodically emits fake positions for existing vehicles
 
-const faker = require('faker');
-
 module.exports = async function(io, pool) {
   console.log('GPS simulator starting');
 
   // build an initial list of vehicles from DB
   const res = await pool.query('SELECT id, number FROM vehicles LIMIT 10');
-  let vehicles = res.rows;
+  let vehicles = (res && res.rows) ? res.rows : [];
 
   // if none, create a few sample vehicles
-  if (vehicles.length === 0) {
+  if (!vehicles || vehicles.length === 0) {
     const sample = [
       ['001','ABC-1001'],
       ['002','ABC-1002'],
       ['003','ABC-1003']
     ];
     for (const [num, plate] of sample) {
-      const r = await pool.query(`INSERT INTO vehicles(number, plate, model, year, km, unit, status) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id, number`, [num, plate, 'Ford Ranger', 2018, 100000, 'RPM', 'Em operação']);
+      const r = await pool.query(
+        `INSERT INTO vehicles(number, plate, model, year, km, unit, status)
+         VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id, number`,
+        [num, plate, 'Ford Ranger', 2018, 100000, 'Unidade A', 'Em operação']
+      );
       vehicles.push(r.rows[0]);
     }
   }
@@ -33,7 +35,8 @@ module.exports = async function(io, pool) {
       const payload = {
         vehicleId: v.id,
         number: v.number,
-        lat, lng,
+        lat,
+        lng,
         speed: Math.floor(Math.random() * 80),
         updatedAt: new Date().toISOString()
       };
